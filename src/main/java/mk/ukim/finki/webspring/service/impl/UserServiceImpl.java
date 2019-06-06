@@ -37,7 +37,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<User> updateUser(String email, String password, String name, String surname) {
-        return null;
+        Mono<User> existingUser=userRepository.findUserByEmail(email);
+        return existingUser.flatMap(user->{
+            if(password!=null){
+                user.setPassword(password);
+            }
+            if(name!=null)
+            {
+                user.setName(name);
+            }
+            if(surname!=null){
+                user.setSurname(surname);
+            }
+           return userRepository.save(user);
+        });
     }
 
     @Override
