@@ -20,13 +20,12 @@ public interface UserService {
 
     Mono<User> updateUser(String email, UserDTO userDTO);/*String email, String password, String name, String surname);*/
 
-    Mono<Void> deleteUser(String email);
+    Mono<Void> deleteUser(String id);
 
     Flux<LoyalCard> getUserCards(String email);
 
     Mono<User> addNewLoyalCard(String email, LoyalCard loyalCard);
 
    Mono<User> deleteUserCard(String email,String barcode);
-
 
 }

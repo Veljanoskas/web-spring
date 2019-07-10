@@ -3,21 +3,28 @@ package mk.ukim.finki.webspring.service.impl;
 import mk.ukim.finki.webspring.model.LoyalCard;
 import mk.ukim.finki.webspring.model.User;
 import mk.ukim.finki.webspring.model.UserDTO;
+import mk.ukim.finki.webspring.model.exceptions.UserNotFoundException;
 import mk.ukim.finki.webspring.repository.UserRepository;
+import mk.ukim.finki.webspring.repository.VendorRepository;
+import mk.ukim.finki.webspring.service.LoyalCardService;
 import mk.ukim.finki.webspring.service.UserService;
+import mk.ukim.finki.webspring.service.VendorService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private LoyalCardService loyalCardService;
+
+    @Autowired private VendorService vs;
 
     @Override
     public Flux<User> getAllUsers() {
@@ -43,28 +50,36 @@ public class UserServiceImpl implements UserService {
     public Mono<User> updateUser(String email, UserDTO userDTO){
         Mono<User> user = this.userRepository.findUserByEmail(email);
         return user.flatMap(value -> {
-            value.setName(userDTO.name);
-            value.setSurname(userDTO.surname);
-            value.setPassword(userDTO.password);
+            if(!userDTO.name.isEmpty()) {
+                value.setName(userDTO.name);
+            }
+            if(!userDTO.surname.isEmpty()) {
+                value.setSurname(userDTO.surname);
+            }
+            if(!userDTO.password.isEmpty()){
+                value.setPassword(new BCryptPasswordEncoder().encode(userDTO.password));
+            }
             return Mono.just(value); // Can this be done cleaner?
         }).flatMap(this.userRepository::save);
     }
 
     @Override
-    public Mono<Void> deleteUser(String email) {
-        return userRepository.deleteByEmail(email);
+    public Mono<Void> deleteUser(String id) {
+        return userRepository.deleteById(id);
     }
 
     @Override
     public Flux<LoyalCard> getUserCards(String email) {
         Mono<User> user=userRepository.findUserByEmail(email);
         return user.map(u->u.getLoyalCardList().stream()).flatMapMany(Flux::fromStream);
+
     }
 
     @Override
     public Mono<User> addNewLoyalCard(String email, LoyalCard loyalCard) {
 
         Mono<User> user = this.userRepository.findUserByEmail(email);
+        this.loyalCardService.saveLoyalCard(loyalCard);
         return user.flatMap(value -> {
             value.getLoyalCardList().add(loyalCard);
             return Mono.just(value); // Can this be done cleaner?
@@ -74,11 +89,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public Mono<User> deleteUserCard(String email,String barcode) {
         Mono<User> user = this.userRepository.findUserByEmail(email);
+        this.loyalCardService.deleteLoyalCard(barcode);
           return user.flatMap(value -> {
             value.getLoyalCardList().removeIf(loyalCard -> loyalCard.barcode.equals(barcode));
             return Mono.just(value); // Can this be done cleaner?
         }).flatMap(this.userRepository::save);
     }
-
-
 }

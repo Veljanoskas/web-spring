@@ -1,13 +1,21 @@
 package mk.ukim.finki.webspring.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import reactor.core.publisher.Flux;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.List;
+import java.io.Serializable;
+import java.util.*;
 
 @Document
-public class User {
+@ToString
+public class User implements UserDetails, Serializable {
+
     @Id
     private String id;
     private String email;
@@ -15,7 +23,7 @@ public class User {
     private String surname;
     private String password;
     private Role role;
-    private List<LoyalCard> loyalCardList;
+    private List<LoyalCard> loyalCardList=new ArrayList<LoyalCard>();
 
     public User() {
     }
@@ -59,10 +67,44 @@ public class User {
         this.surname = surname;
     }
 
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        Set<GrantedAuthority> authoritySet = new HashSet<>();
+        authoritySet.add(new SimpleGrantedAuthority(this.role.toString()));
+        return authoritySet;
+    }
+
+    @JsonIgnore
     public String getPassword() {
         return password;
     }
 
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return false;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    @JsonProperty
     public void setPassword(String password) {
         this.password = password;
     }
@@ -82,4 +124,5 @@ public class User {
     public void setLoyalCardList(List<LoyalCard> loyalCardList) {
         this.loyalCardList = loyalCardList;
     }
+
 }

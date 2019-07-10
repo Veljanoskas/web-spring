@@ -4,42 +4,47 @@ import jdk.nashorn.internal.runtime.logging.Logger;
 import mk.ukim.finki.webspring.model.LoyalCard;
 import mk.ukim.finki.webspring.model.User;
 import mk.ukim.finki.webspring.model.UserDTO;
+import mk.ukim.finki.webspring.model.Vendor;
 import mk.ukim.finki.webspring.service.UserService;
+import mk.ukim.finki.webspring.service.VendorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.Console;
+import java.security.Principal;
+import java.util.Collections;
+
 @RestController
 @RequestMapping("/user")
+@CrossOrigin("*")
 public class UserController {
 
     @Autowired
     private UserService service;
 
-    @RequestMapping(method = RequestMethod.GET)
-    @ResponseBody
-    public Flux<User> findAll() {
-        Flux<User> users = service.getAllUsers();
-        return users;
-    }
+    @Autowired
+    private VendorService vendorService;
+
 
     @RequestMapping(value="/cards",method = RequestMethod.GET)
+    @PreAuthorize("hasRole('USER')")
     @ResponseBody
-    public Flux<LoyalCard> findUserCards() {
-        Flux<LoyalCard> cards = service.getUserCards("gordesssv@yahoo.com");
+    public Flux<LoyalCard> findUserCards(@RequestHeader(value = "Username")String username) {
+
+        Flux<LoyalCard> cards = service.getUserCards(username);
+
         return cards;
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public void saveUser(@RequestBody User user){
-        service.saveUser(user);
-    }
 
     @GetMapping("{id}")
     public Mono<ResponseEntity<User>> getUser(@PathVariable String id){
@@ -63,18 +68,30 @@ public class UserController {
 
     @PutMapping("{email}")
     @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasRole('USER')")
     public Mono<User> update(@PathVariable String email, @RequestBody UserDTO userDTO) {
         return service.updateUser(email,userDTO);
     }
 
     @RequestMapping(value="/cards",method = RequestMethod.POST)
-    public Mono<User> addNewLoyalCard(@RequestBody LoyalCard loyalCard) {
-        return service.addNewLoyalCard("gordesssv@yahoo.com",loyalCard);
+    @PreAuthorize("hasRole('USER')")
+    public Mono<User> addNewLoyalCard(@RequestHeader(value = "Username")String username,@RequestBody LoyalCard loyalCard) {
+        return service.addNewLoyalCard(username,loyalCard);
     }
 
     @RequestMapping(value = "/cards/{barcode}", method = RequestMethod.DELETE)
+    @PreAuthorize("hasRole('USER')")
     @ResponseStatus(HttpStatus.OK)
-    public Mono<User> deleteCard(@PathVariable("barcode") String barcode) {
-        return service.deleteUserCard("gordesssv@yahoo.com",barcode);
+    public Mono<User> deleteCard(@RequestHeader(value = "Username")String username,@PathVariable("barcode") String barcode) {
+        return service.deleteUserCard(username,barcode);
     }
+
+    @GetMapping("/vendors")
+    @PreAuthorize("hasRole('USER')")
+    @ResponseBody
+    public Flux<Vendor> findAllVendors() {
+        Flux<Vendor> vendors = vendorService.getAllVendors();
+        return vendors;
+    }
+
 }
